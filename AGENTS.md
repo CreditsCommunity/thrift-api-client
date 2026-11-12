@@ -20,14 +20,18 @@ Related repositories of [CreditsCommunity](https://github.com/CreditsCommunity):
 
 ## Branches: read this first
 
-- `master` (the default branch) has a dependabot bump of `libthrift` from 0.12.0 to 0.14.0. With it
-  `executor_client` does not compile: its `module-info.java` requires the module `libthrift`, which
-  0.14 no longer provides (`mvn -DskipTests package` fails with "module not found: libthrift").
-- **`build/reproducible-1518`** is what the contract executor builds against: `59d1e9a` (the last
-  commit before that bump) plus pins of the Eclipse dependencies to the versions bundled in executor
-  build 1518. Changes meant for the executor go there.
-- `mvn-repo` holds Maven artifacts published by the original project. There is no CI in this
-  repository: the contract executor's CI builds it.
+- **`build/reproducible-1518`** is what the contract executor builds against (its `build.yml` checks
+  out this branch): `59d1e9a` plus pins of the Eclipse dependencies to the versions bundled in
+  executor build 1518 (`1a8d79f`). Changes meant for the executor go there, then reach `master`
+  by a merge.
+- `master` (the default branch) is `build/reproducible-1518` merged with the later upstream commits:
+  two `node_client` fixes (transaction id, deploy signature), which the executor does not use, and
+  AGENTS.md. Its `general` and `executor_client` sources are those of `build/reproducible-1518`.
+- `libthrift` stays at 0.12.0. A dependabot bump to 0.14.0 broke the build (0.14 has no module
+  named `libthrift`, so `executor_client`'s and `node_client`'s `module-info.java` fail with
+  "module not found: libthrift") and was reverted on `master`. Do not merge such a bump: it changes
+  what the executor bundles.
+- `mvn-repo` holds Maven artifacts published by the original project.
 
 ## Platform constraints
 
@@ -53,10 +57,17 @@ do not edit it by hand; regenerate it from the IDL with the same compiler versio
 JDK 11 and Maven. For the executor:
 
 ```sh
-git checkout build/reproducible-1518
 mvn -B -DskipTests install      # installs general, node_client, executor_client into ~/.m2
 mvn -B test                     # JUnit 4 tests in general/src/test
 ```
+
+JDK 11 is needed: the Lombok version used does not run on JDK 17.
+
+## CI
+
+`.github/workflows/ci.yml`: `mvn -B install` (build and tests) with JDK 11 on every push to
+`master` and every pull request. The contract executor's CI also builds `build/reproducible-1518`
+and compares every contract result with build 1518.
 
 For a build byte-identical to 1518, use JDK 11.0.3 and the Maven settings of contract-executor
 (`third-party/maven-settings.xml` on its branch `build/reproducible-1518`; see its `BUILDING.md`).
